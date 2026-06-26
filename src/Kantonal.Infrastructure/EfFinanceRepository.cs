@@ -23,6 +23,23 @@ public class EfFinanceRepository : IFinanceRepository
     public async Task<MunicipalFinanceRecord?> GetByKeyAsync(BfsNumber bfsNumber, int year, CancellationToken ct)
         => await _db.FinanceRecords.FirstOrDefaultAsync(r => r.BfsNumber == bfsNumber && r.Year == year, ct);
 
+    public async Task<FinanceFilterOptions> GetFilterOptionsAsync(CancellationToken ct)
+    {
+        var municipalities = await _db.FinanceRecords
+            .Select(r => r.MunicipalityName)
+            .Distinct()
+            .OrderBy(name => name)
+            .ToListAsync(ct);
+
+        var years = await _db.FinanceRecords
+            .Select(r => r.Year)
+            .Distinct()
+            .OrderByDescending(year => year)
+            .ToListAsync(ct);
+
+        return new FinanceFilterOptions(municipalities, years);
+    }
+
     public async Task<int> UpsertManyAsync(IReadOnlyList<MunicipalFinanceRecord> records, CancellationToken ct)
     {
         if (records.Count == 0) return 0;

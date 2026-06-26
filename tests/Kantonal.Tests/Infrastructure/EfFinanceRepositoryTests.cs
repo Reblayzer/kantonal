@@ -142,6 +142,22 @@ public class EfFinanceRepositoryTests
     }
 
     [Fact]
+    public async Task GetFilterOptionsAsync_ReturnsDistinctMunicipalitiesSortedAndYearsDescending()
+    {
+        await using var ctx = NewContext();
+        ctx.FinanceRecords.AddRange(
+            Rec(1, "Bürglen", 2023, 1m), Rec(1, "Bürglen", 2024, 2m),
+            Rec(2, "Aadorf", 2024, 3m), Rec(3, "Aadorf", 2022, 4m));
+        await ctx.SaveChangesAsync();
+        var repo = new EfFinanceRepository(ctx);
+
+        var options = await repo.GetFilterOptionsAsync(CancellationToken.None);
+
+        Assert.Equal(new[] { "Aadorf", "Bürglen" }, options.Municipalities.ToArray());
+        Assert.Equal(new[] { 2024, 2023, 2022 }, options.Years.ToArray());
+    }
+
+    [Fact]
     public async Task UpsertManyAsync_InsertsNewAndUpdatesExisting()
     {
         await using var ctx = NewContext();

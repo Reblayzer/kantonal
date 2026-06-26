@@ -22,6 +22,11 @@ public class FinanceQueryServiceTests
 
         public Task<int> UpsertManyAsync(IReadOnlyList<MunicipalFinanceRecord> records, CancellationToken ct)
             => Task.FromResult(records.Count);
+
+        public Task<FinanceFilterOptions> GetFilterOptionsAsync(CancellationToken ct)
+            => Task.FromResult(new FinanceFilterOptions(
+                _records.Select(r => r.MunicipalityName).Distinct().OrderBy(n => n).ToList(),
+                _records.Select(r => r.Year).Distinct().OrderByDescending(y => y).ToList()));
     }
 
     private static FinanceIndicators Ind(decimal? selfFinancing, decimal? netDebt) =>

@@ -8,4 +8,5 @@ public interface IFinanceRepository
     Task<int> CountAsync(string? municipality, int? year, CancellationToken ct);
     Task<MunicipalFinanceRecord?> GetByKeyAsync(BfsNumber bfsNumber, int year, CancellationToken ct);
     Task<int> UpsertManyAsync(IReadOnlyList<MunicipalFinanceRecord> records, CancellationToken ct);
+    Task<FinanceFilterOptions> GetFilterOptionsAsync(CancellationToken ct);
 }
