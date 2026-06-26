@@ -26,7 +26,8 @@ app.UseSwaggerUI();
 
 app.MapGet("/api/finance", async (FinanceQueryService service, int? page, int? pageSize, CancellationToken ct) =>
 {
-    var result = await service.GetPageAsync(page ?? 1, pageSize ?? 20, ct);
+    var request = new FinanceListRequest(null, null, null, null, page ?? 1, pageSize ?? 20);
+    var result = await service.GetPageAsync(request, ct);
     return Results.Ok(ApiEnvelope.Success(result));
 });
 
