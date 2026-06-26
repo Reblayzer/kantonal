@@ -27,6 +27,7 @@
     <ProjectReference Include="..\..\src\Kantonal.Application\Kantonal.Application.csproj" />
     <ProjectReference Include="..\..\src\Kantonal.Infrastructure\Kantonal.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Kantonal.Api\Kantonal.Api.csproj" />
+    <ProjectReference Include="..\..\src\Kantonal.Web\Kantonal.Web.csproj" />
   </ItemGroup>
 
 </Project>
