@@ -50,5 +50,5 @@ else
     private FinancePage? _page;
 
     protected override async Task OnInitializedAsync()
-        => _page = await Api.GetAsync(1, 20, CancellationToken.None);
+        => _page = await Api.GetAsync(new FinanceQuery(Page: 1, PageSize: 20), CancellationToken.None);
 }
