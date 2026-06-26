@@ -25,11 +25,16 @@ public class FinanceEndpointTests : IClassFixture<FinanceEndpointTests.TestApi>
         Assert.True(body!.Ok);
         Assert.True(body.Data!.Total >= 3);
         Assert.NotEmpty(body.Data.Items);
+
+        var aadorf = body.Data.Items.FirstOrDefault(i => i.MunicipalityName == "Aadorf");
+        Assert.NotNull(aadorf);
+        Assert.Equal(163.81m, aadorf!.SelfFinancingRatio);
+        Assert.Equal(1415.95m, aadorf.NetDebtPerCapitaChf);
     }
 
     public record Envelope(bool Ok, Data? Data);
     public record Data(List<Item> Items, int Page, int PageSize, int Total);
-    public record Item(int BfsNumber, string MunicipalityName, int Year);
+    public record Item(int BfsNumber, string MunicipalityName, int Year, decimal? SelfFinancingRatio, decimal? NetDebtPerCapitaChf);
 
     public class TestApi : WebApplicationFactory<Program>
     {

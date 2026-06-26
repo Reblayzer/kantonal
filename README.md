@@ -14,6 +14,8 @@ docker compose up --build
 - Blazor dashboard: http://localhost:5080/finance
 - PostgreSQL: localhost:5432 (kantonal / postgres / postgres)
 
+> **Local development only.** The credentials above are defaults for local development and must never be used for any deployment. Use environment variables or a secrets manager to supply credentials in staging and production environments.
+
 ## Run tests
 
 ```bash

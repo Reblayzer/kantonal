@@ -12,11 +12,9 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure(connectionString);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();
 
-app.UseCors();
 app.UseSwagger();
 app.UseSwaggerUI();
 
