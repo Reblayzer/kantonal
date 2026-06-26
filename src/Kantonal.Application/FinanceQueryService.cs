@@ -22,5 +22,7 @@ public class FinanceQueryService
     }
 
     private static FinanceRecordDto ToDto(MunicipalFinanceRecord r) => new(
-        r.BfsNumber.Value, r.MunicipalityName, r.Year, r.SelfFinancingRatio, r.NetDebtPerCapitaChf);
+        r.BfsNumber.Value, r.MunicipalityName, r.Year,
+        r.SelfFinancingRatio, r.SelfFinancingShare, r.InterestBurdenShare, r.CapitalServiceShare,
+        r.InvestmentShare, r.GrossDebtShare, r.NetDebtPerCapitaChf, r.NetDebtQuotient, r.BalanceSheetSurplusQuotient);
 }

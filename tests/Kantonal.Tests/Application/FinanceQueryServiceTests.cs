@@ -16,8 +16,11 @@ public class FinanceQueryServiceTests
             => Task.FromResult(0);
     }
 
+    private static FinanceIndicators Ind(decimal? selfFinancing, decimal? netDebt) =>
+        new(selfFinancing, null, null, null, null, null, netDebt, null, null);
+
     private static MunicipalFinanceRecord Row(int bfs, string name)
-        => new(BfsNumber.Create(bfs), name, 2024, 100m, 50m);
+        => new(BfsNumber.Create(bfs), name, 2024, Ind(100m, 50m));
 
     [Fact]
     public async Task GetPageAsync_ReturnsRequestedPageAndTotal()

@@ -15,6 +15,9 @@ public class FinanceEndpointTests : IClassFixture<FinanceEndpointTests.TestApi>
     private readonly TestApi _api;
     public FinanceEndpointTests(TestApi api) => _api = api;
 
+    private static FinanceIndicators Ind(decimal? selfFinancing, decimal? netDebt) =>
+        new(selfFinancing, null, null, null, null, null, netDebt, null, null);
+
     [Fact]
     public async Task GetFinance_ReturnsOkEnvelopeWithItems()
     {
@@ -50,7 +53,19 @@ public class FinanceEndpointTests : IClassFixture<FinanceEndpointTests.TestApi>
 
     public record Envelope(bool Ok, Data? Data);
     public record Data(List<Item> Items, int Page, int PageSize, int Total);
-    public record Item(int BfsNumber, string MunicipalityName, int Year, decimal? SelfFinancingRatio, decimal? NetDebtPerCapitaChf);
+    public record Item(
+        int BfsNumber,
+        string MunicipalityName,
+        int Year,
+        decimal? SelfFinancingRatio,
+        decimal? SelfFinancingShare,
+        decimal? InterestBurdenShare,
+        decimal? CapitalServiceShare,
+        decimal? InvestmentShare,
+        decimal? GrossDebtShare,
+        decimal? NetDebtPerCapitaChf,
+        decimal? NetDebtQuotient,
+        decimal? BalanceSheetSurplusQuotient);
     public record ImportEnvelope(bool Ok, ImportData? Data);
     public record ImportData(int Imported);
 
@@ -83,9 +98,9 @@ public class FinanceEndpointTests : IClassFixture<FinanceEndpointTests.TestApi>
         public Task<IReadOnlyList<MunicipalFinanceRecord>> FetchAllAsync(CancellationToken ct)
             => Task.FromResult<IReadOnlyList<MunicipalFinanceRecord>>(new[]
             {
-                new MunicipalFinanceRecord(BfsNumber.Create(4551), "Aadorf", 2024, 163.81m, 1415.95m),
-                new MunicipalFinanceRecord(BfsNumber.Create(4711), "Affeltrangen", 2024, 80.36m, -683.62m),
-                new MunicipalFinanceRecord(BfsNumber.Create(4486), "Amlikon-Bissegg", 2024, 95.10m, 210.40m),
+                new MunicipalFinanceRecord(BfsNumber.Create(4551), "Aadorf", 2024, Ind(163.81m, 1415.95m)),
+                new MunicipalFinanceRecord(BfsNumber.Create(4711), "Affeltrangen", 2024, Ind(80.36m, -683.62m)),
+                new MunicipalFinanceRecord(BfsNumber.Create(4486), "Amlikon-Bissegg", 2024, Ind(95.10m, 210.40m)),
             });
     }
 }

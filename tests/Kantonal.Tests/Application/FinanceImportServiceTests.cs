@@ -5,12 +5,15 @@ namespace Kantonal.Tests.Application;
 
 public class FinanceImportServiceTests
 {
+    private static FinanceIndicators Ind(decimal? selfFinancing, decimal? netDebt) =>
+        new(selfFinancing, null, null, null, null, null, netDebt, null, null);
+
     [Fact]
     public async Task ImportAsync_UpsertsAllFetchedRecords()
     {
         var source = new StubSource(
-            new MunicipalFinanceRecord(BfsNumber.Create(4551), "Aadorf", 2024, 163.81m, 1415.95m),
-            new MunicipalFinanceRecord(BfsNumber.Create(4711), "Affeltrangen", 2024, 80.36m, -683.62m));
+            new MunicipalFinanceRecord(BfsNumber.Create(4551), "Aadorf", 2024, Ind(163.81m, 1415.95m)),
+            new MunicipalFinanceRecord(BfsNumber.Create(4711), "Affeltrangen", 2024, Ind(80.36m, -683.62m)));
         var repo = new RecordingRepository();
         var service = new FinanceImportService(source, repo);
 

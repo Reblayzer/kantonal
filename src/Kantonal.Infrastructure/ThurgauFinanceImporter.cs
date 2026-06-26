@@ -53,12 +53,11 @@ public sealed class ThurgauFinanceImporter : IFinanceImportSource
         if (!int.TryParse(fields.Year, out var year)) return null;
         if (string.IsNullOrWhiteSpace(fields.MunicipalityName)) return null;
 
-        return new MunicipalFinanceRecord(
-            BfsNumber.Create(bfs),
-            fields.MunicipalityName,
-            year,
-            ToDecimal(fields.SelfFinancingRatio),
-            ToDecimal(fields.NetDebtPerCapitaChf));
+        var indicators = new FinanceIndicators(
+            ToDecimal(fields.SelfFinancingRatio), null, null, null, null, null,
+            ToDecimal(fields.NetDebtPerCapitaChf), null, null);
+
+        return new MunicipalFinanceRecord(BfsNumber.Create(bfs), fields.MunicipalityName, year, indicators);
     }
 
     private static decimal? ToDecimal(double? value) => value is null ? null : (decimal)value.Value;
