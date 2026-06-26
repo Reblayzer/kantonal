@@ -15,6 +15,11 @@
 }
 else
 {
+    @if (_optionsError is not null)
+    {
+        <p class="error" role="alert">@_optionsError</p>
+    }
+
     <section class="controls">
         <label>Municipality:
             <select @bind="_municipality" @bind:after="ApplyFilterAsync">
@@ -55,9 +60,17 @@ else
         </label>
     </section>
 
+    @if (_chartError is not null)
+    {
+        <p class="error" role="alert">@_chartError</p>
+    }
     <RatioBarChart Data="_chartData" Title="@ChartTitle" />
 
-    @if (_page is null)
+    @if (_tableError is not null)
+    {
+        <p class="error" role="alert">@_tableError</p>
+    }
+    else if (_page is null)
     {
         <p><em>Loading…</em></p>
     }
@@ -93,13 +106,28 @@ else
     private int _chartYear;
     private IReadOnlyList<RatioBarChart.Datum> _chartData = Array.Empty<RatioBarChart.Datum>();
 
+    private string? _optionsError;
+    private string? _tableError;
+    private string? _chartError;
+
     private string ChartTitle =>
         $"Top {ChartTopN} — {RatioCatalog.Ratios.First(r => r.Key == _chartRatioKey).Label} ({_chartYear})";
 
     protected override async Task OnInitializedAsync()
     {
-        _options = await Api.GetOptionsAsync(CancellationToken.None);
-        _chartYear = _options.Years.FirstOrDefault();
+        try
+        {
+            _options = await Api.GetOptionsAsync(CancellationToken.None);
+            _chartYear = _options.Years.FirstOrDefault();
+        }
+        catch (Exception)
+        {
+            // Spec §5: a failure surfaces an inline error and leaves the page
+            // usable with empty dropdowns.
+            _options = new FilterOptions(Array.Empty<string>(), Array.Empty<int>());
+            _optionsError = "Couldn't load filter options. The page is shown with empty dropdowns.";
+        }
+
         await ReloadTableAsync();
         await ReloadChartAsync();
     }
@@ -119,7 +147,17 @@ else
             SortDir: _sort.Direction,
             Page: _pageNumber,
             PageSize: PageSize);
-        _page = await Api.GetAsync(query, CancellationToken.None);
+        try
+        {
+            _page = await Api.GetAsync(query, CancellationToken.None);
+            _tableError = null;
+        }
+        catch (Exception)
+        {
+            // Spec §5: list-load failure → inline error message instead of the table.
+            _page = null;
+            _tableError = "Couldn't load finance records. Please try again.";
+        }
     }
 
     private async Task ReloadChartAsync()
@@ -128,12 +166,20 @@ else
         var query = new FinanceQuery(
             Year: _chartYear, SortBy: _chartRatioKey, SortDir: SortState.Desc,
             Page: 1, PageSize: ChartTopN);
-        var page = await Api.GetAsync(query, CancellationToken.None);
-
-        _chartData = page.Items
-            .Where(row => ratio.Selector(row) is not null)
-            .Select(row => new RatioBarChart.Datum(row.MunicipalityName, ratio.Selector(row)!.Value))
-            .ToList();
+        try
+        {
+            var page = await Api.GetAsync(query, CancellationToken.None);
+            _chartData = page.Items
+                .Where(row => ratio.Selector(row) is not null)
+                .Select(row => new RatioBarChart.Datum(row.MunicipalityName, ratio.Selector(row)!.Value))
+                .ToList();
+            _chartError = null;
+        }
+        catch (Exception)
+        {
+            _chartData = Array.Empty<RatioBarChart.Datum>();
+            _chartError = "Couldn't load chart data.";
+        }
     }
 
     private async Task OnSortAsync(string field)

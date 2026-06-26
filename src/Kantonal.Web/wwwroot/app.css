@@ -35,3 +35,4 @@ h1:focus {
 .finance-table th[role="button"] { cursor: pointer; user-select: none; white-space: nowrap; }
 .finance-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
 .paging { display: flex; gap: 0.75rem; align-items: center; margin-top: 0.75rem; }
+.error { color: #b32121; background: #fdecea; border: 1px solid #f5c2c0; border-radius: 4px; padding: 0.5rem 0.75rem; margin: 0.5rem 0; }
