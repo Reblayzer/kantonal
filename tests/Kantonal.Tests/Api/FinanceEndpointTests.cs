@@ -1,5 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
+using Kantonal.Application;
+using Kantonal.Domain;
 using Kantonal.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -32,9 +34,25 @@ public class FinanceEndpointTests : IClassFixture<FinanceEndpointTests.TestApi>
         Assert.Equal(1415.95m, aadorf.NetDebtPerCapitaChf);
     }
 
+    [Fact]
+    public async Task PostImport_ReturnsOkEnvelopeWithImportedCount()
+    {
+        var client = _api.CreateClient();
+        var response = await client.PostAsync("/api/import", null);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<ImportEnvelope>();
+        Assert.NotNull(body);
+        Assert.True(body!.Ok);
+        Assert.NotNull(body.Data);
+        Assert.Equal(3, body.Data!.Imported);
+    }
+
     public record Envelope(bool Ok, Data? Data);
     public record Data(List<Item> Items, int Page, int PageSize, int Total);
     public record Item(int BfsNumber, string MunicipalityName, int Year, decimal? SelfFinancingRatio, decimal? NetDebtPerCapitaChf);
+    public record ImportEnvelope(bool Ok, ImportData? Data);
+    public record ImportData(int Imported);
 
     public class TestApi : WebApplicationFactory<Program>
     {
@@ -48,7 +66,26 @@ public class FinanceEndpointTests : IClassFixture<FinanceEndpointTests.TestApi>
                 foreach (var descriptor in descriptors)
                     services.Remove(descriptor);
                 services.AddDbContext<KantonalDbContext>(o => o.UseInMemoryDatabase("api-tests"));
+
+                // Swap the live importer for a deterministic, offline fake.
+                var sourceDescriptors = services
+                    .Where(d => d.ServiceType == typeof(IFinanceImportSource))
+                    .ToList();
+                foreach (var descriptor in sourceDescriptors)
+                    services.Remove(descriptor);
+                services.AddSingleton<IFinanceImportSource, FakeFinanceImportSource>();
             });
         }
+    }
+
+    private sealed class FakeFinanceImportSource : IFinanceImportSource
+    {
+        public Task<IReadOnlyList<MunicipalFinanceRecord>> FetchAllAsync(CancellationToken ct)
+            => Task.FromResult<IReadOnlyList<MunicipalFinanceRecord>>(new[]
+            {
+                new MunicipalFinanceRecord(BfsNumber.Create(4551), "Aadorf", 2024, 163.81m, 1415.95m),
+                new MunicipalFinanceRecord(BfsNumber.Create(4711), "Affeltrangen", 2024, 80.36m, -683.62m),
+                new MunicipalFinanceRecord(BfsNumber.Create(4486), "Amlikon-Bissegg", 2024, 95.10m, 210.40m),
+            });
     }
 }

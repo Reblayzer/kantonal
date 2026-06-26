@@ -22,10 +22,23 @@ docker compose up --build
 dotnet test Kantonal.sln
 ```
 
+## Data
+
+Finance data is imported from the Kanton Thurgau open-data portal
+(opendata.swiss dataset `sk-stat-4`, served via the Opendatasoft records API at
+`https://data.tg.ch/`). The API imports all records at startup (failure-tolerant:
+an outage logs an error and the app still starts) and on demand via:
+
+    POST /api/import   ->   { "ok": true, "data": { "imported": <count> } }
+
+The import is an idempotent upsert keyed on `(BfsNumber, Year)`, so it is safe to
+re-run. Only two KPI ratios are modelled today (self-financing ratio, net debt per
+capita); the remaining ratios are a planned follow-up.
+
 ## Architecture
 
 `Domain` ← `Application` ← `Infrastructure` (EF Core/Postgres) + `Api` (composition
 root). `Web` (Blazor) is a separate client calling the API over HTTP.
 
 Built with AI-assisted development (Claude Code) and reviewed before merging.
-Azure deployment notes and the opendata.swiss import job are tracked in follow-up work.
+Azure deployment notes are tracked in follow-up work.
