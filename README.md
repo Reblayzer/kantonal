@@ -31,6 +31,10 @@ an outage logs an error and the app still starts) and on demand via:
 
     POST /api/import   ->   { "ok": true, "data": { "imported": <count> } }
 
+> **Unauthenticated, local development only.** `POST /api/import` has no auth or
+> rate limiting yet — it must be gated before the service is exposed in any shared
+> environment. Authorization is tracked as follow-up work.
+
 The import is an idempotent upsert keyed on `(BfsNumber, Year)`, so it is safe to
 re-run. Only two KPI ratios are modelled today (self-financing ratio, net debt per
 capita); the remaining ratios are a planned follow-up.
