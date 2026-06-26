@@ -32,4 +32,33 @@ public class EfFinanceRepositoryTests
         Assert.Single(page);
         Assert.Equal("Bravo", page[0].MunicipalityName);
     }
+
+    [Fact]
+    public async Task UpsertManyAsync_InsertsNewAndUpdatesExisting()
+    {
+        await using var ctx = NewContext();
+        ctx.FinanceRecords.Add(
+            new MunicipalFinanceRecord(BfsNumber.Create(4551), "Aadorf", 2024, 163.81m, 1415.95m));
+        await ctx.SaveChangesAsync();
+
+        var repo = new EfFinanceRepository(ctx);
+        var affected = await repo.UpsertManyAsync(new[]
+        {
+            // same key (4551, 2024) -> update
+            new MunicipalFinanceRecord(BfsNumber.Create(4551), "Aadorf", 2024, 200.00m, 999.99m),
+            // new key -> insert
+            new MunicipalFinanceRecord(BfsNumber.Create(4711), "Affeltrangen", 2024, 80.36m, -683.62m),
+        }, CancellationToken.None);
+
+        Assert.Equal(2, affected);
+
+        var all = await ctx.FinanceRecords.OrderBy(r => r.MunicipalityName).ToListAsync();
+        Assert.Equal(2, all.Count);
+
+        var aadorf = all.Single(r => r.BfsNumber == BfsNumber.Create(4551));
+        Assert.Equal(200.00m, aadorf.SelfFinancingRatio);
+        Assert.Equal(999.99m, aadorf.NetDebtPerCapitaChf);
+
+        Assert.Contains(all, r => r.MunicipalityName == "Affeltrangen");
+    }
 }
