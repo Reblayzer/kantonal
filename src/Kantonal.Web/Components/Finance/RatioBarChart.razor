@@ -1,0 +1,47 @@
+@using System.Globalization
+@using System.Net
+@using Kantonal.Web.Charting
+
+<figure class="chart">
+    <figcaption>@Title</figcaption>
+    @if (Data.Count == 0)
+    {
+        <p><em>No data to chart.</em></p>
+    }
+    else
+    {
+        var layout = BarChartGeometry.Compute(Data.Select(d => d.Value).ToList(), Width, Height);
+        <svg width="@Inv(Width)" height="@Inv(Height + LabelSpace)" role="img" aria-label="@Title" class="bar-chart">
+            @for (var i = 0; i < layout.Bars.Count; i++)
+            {
+                var bar = layout.Bars[i];
+                <rect x="@Inv(bar.X)" y="@Inv(bar.Y)" width="@Inv(bar.Width)" height="@Inv(bar.Height)" fill="#3b6ea5">
+                    <title>@Data[i].Label: @Data[i].Value.ToString("0.##", CultureInfo.InvariantCulture)</title>
+                </rect>
+                @BarLabel(i, bar)
+            }
+        </svg>
+    }
+</figure>
+
+@code {
+    public sealed record Datum(string Label, decimal Value);
+
+    [Parameter, EditorRequired] public IReadOnlyList<Datum> Data { get; set; } = Array.Empty<Datum>();
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public double Width { get; set; } = 760;
+    [Parameter] public double Height { get; set; } = 240;
+
+    private const double LabelSpace = 70;
+
+    private static string Inv(double v) => v.ToString(CultureInfo.InvariantCulture);
+
+    // <text> is a reserved Razor tag; emit via MarkupString with explicit encoding.
+    private MarkupString BarLabel(int i, Bar bar)
+    {
+        var cx  = Inv(bar.X + bar.Width / 2);
+        var y   = Inv(Height + 10);
+        var lbl = WebUtility.HtmlEncode(Data[i].Label);
+        return (MarkupString)$"""<text x="{cx}" y="{y}" font-size="9" text-anchor="end" transform="rotate(-45 {cx} {y})">{lbl}</text>""";
+    }
+}
