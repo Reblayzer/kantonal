@@ -53,12 +53,18 @@ public sealed class ThurgauFinanceImporter : IFinanceImportSource
         if (!int.TryParse(fields.Year, out var year)) return null;
         if (string.IsNullOrWhiteSpace(fields.MunicipalityName)) return null;
 
-        return new MunicipalFinanceRecord(
-            BfsNumber.Create(bfs),
-            fields.MunicipalityName,
-            year,
+        var indicators = new FinanceIndicators(
             ToDecimal(fields.SelfFinancingRatio),
-            ToDecimal(fields.NetDebtPerCapitaChf));
+            ToDecimal(fields.SelfFinancingShare),
+            ToDecimal(fields.InterestBurdenShare),
+            ToDecimal(fields.CapitalServiceShare),
+            ToDecimal(fields.InvestmentShare),
+            ToDecimal(fields.GrossDebtShare),
+            ToDecimal(fields.NetDebtPerCapitaChf),
+            ToDecimal(fields.NetDebtQuotient),
+            ToDecimal(fields.BalanceSheetSurplusQuotient));
+
+        return new MunicipalFinanceRecord(BfsNumber.Create(bfs), fields.MunicipalityName, year, indicators);
     }
 
     private static decimal? ToDecimal(double? value) => value is null ? null : (decimal)value.Value;
@@ -78,5 +84,12 @@ public sealed class ThurgauFinanceImporter : IFinanceImportSource
         [property: JsonPropertyName("gemeinde_name")] string? MunicipalityName,
         [property: JsonPropertyName("jahr")] string? Year,
         [property: JsonPropertyName("selbstfinanzierungsgrad_in")] double? SelfFinancingRatio,
-        [property: JsonPropertyName("nettoschuld_nettovermogen_pro_einwohner_in_chf")] double? NetDebtPerCapitaChf);
+        [property: JsonPropertyName("selbstfinanzierungsanteil_in")] double? SelfFinancingShare,
+        [property: JsonPropertyName("zinsbelastungsanteil_in")] double? InterestBurdenShare,
+        [property: JsonPropertyName("kapitaldienstanteil_in")] double? CapitalServiceShare,
+        [property: JsonPropertyName("investitionsanteil_in")] double? InvestmentShare,
+        [property: JsonPropertyName("bruttoverschuldungsanteil_in")] double? GrossDebtShare,
+        [property: JsonPropertyName("nettoschuld_nettovermogen_pro_einwohner_in_chf")] double? NetDebtPerCapitaChf,
+        [property: JsonPropertyName("nettoverschuldungsquotient_in")] double? NetDebtQuotient,
+        [property: JsonPropertyName("bilanzuberschussquotient_in")] double? BalanceSheetSurplusQuotient);
 }

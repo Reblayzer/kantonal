@@ -5,12 +5,15 @@ namespace Kantonal.Tests.Application;
 
 public class FinanceImportServiceTests
 {
+    private static FinanceIndicators Ind(decimal? selfFinancing, decimal? netDebt) =>
+        new(selfFinancing, null, null, null, null, null, netDebt, null, null);
+
     [Fact]
     public async Task ImportAsync_UpsertsAllFetchedRecords()
     {
         var source = new StubSource(
-            new MunicipalFinanceRecord(BfsNumber.Create(4551), "Aadorf", 2024, 163.81m, 1415.95m),
-            new MunicipalFinanceRecord(BfsNumber.Create(4711), "Affeltrangen", 2024, 80.36m, -683.62m));
+            new MunicipalFinanceRecord(BfsNumber.Create(4551), "Aadorf", 2024, Ind(163.81m, 1415.95m)),
+            new MunicipalFinanceRecord(BfsNumber.Create(4711), "Affeltrangen", 2024, Ind(80.36m, -683.62m)));
         var repo = new RecordingRepository();
         var service = new FinanceImportService(source, repo);
 
@@ -40,9 +43,13 @@ public class FinanceImportServiceTests
             return Task.FromResult(records.Count);
         }
 
-        public Task<IReadOnlyList<MunicipalFinanceRecord>> GetAsync(int skip, int take, CancellationToken ct)
+        public Task<IReadOnlyList<MunicipalFinanceRecord>> QueryAsync(FinanceQuery query, CancellationToken ct)
             => Task.FromResult<IReadOnlyList<MunicipalFinanceRecord>>(Array.Empty<MunicipalFinanceRecord>());
 
-        public Task<int> CountAsync(CancellationToken ct) => Task.FromResult(0);
+        public Task<int> CountAsync(string? municipality, int? year, CancellationToken ct)
+            => Task.FromResult(0);
+
+        public Task<MunicipalFinanceRecord?> GetByKeyAsync(BfsNumber bfsNumber, int year, CancellationToken ct)
+            => Task.FromResult<MunicipalFinanceRecord?>(null);
     }
 }

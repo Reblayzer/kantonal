@@ -24,5 +24,15 @@ public class KantonalDbContext : DbContext
         entity.Property(e => e.MunicipalityName).HasColumnName("municipality_name").IsRequired();
         entity.Property(e => e.SelfFinancingRatio).HasColumnName("self_financing_ratio").HasColumnType("numeric");
         entity.Property(e => e.NetDebtPerCapitaChf).HasColumnName("net_debt_per_capita_chf").HasColumnType("numeric");
+
+        entity.Property(e => e.SelfFinancingShare).HasColumnName("self_financing_share").HasColumnType("numeric");
+        entity.Property(e => e.InterestBurdenShare).HasColumnName("interest_burden_share").HasColumnType("numeric");
+        entity.Property(e => e.CapitalServiceShare).HasColumnName("capital_service_share").HasColumnType("numeric");
+        entity.Property(e => e.InvestmentShare).HasColumnName("investment_share").HasColumnType("numeric");
+        entity.Property(e => e.GrossDebtShare).HasColumnName("gross_debt_share").HasColumnType("numeric");
+        entity.Property(e => e.NetDebtQuotient).HasColumnName("net_debt_quotient").HasColumnType("numeric");
+        entity.Property(e => e.BalanceSheetSurplusQuotient).HasColumnName("balance_sheet_surplus_quotient").HasColumnType("numeric");
+
+        entity.Ignore(e => e.Indicators);
     }
 }

@@ -5,4 +5,11 @@ public record FinanceRecordDto(
     string MunicipalityName,
     int Year,
     decimal? SelfFinancingRatio,
-    decimal? NetDebtPerCapitaChf);
+    decimal? SelfFinancingShare,
+    decimal? InterestBurdenShare,
+    decimal? CapitalServiceShare,
+    decimal? InvestmentShare,
+    decimal? GrossDebtShare,
+    decimal? NetDebtPerCapitaChf,
+    decimal? NetDebtQuotient,
+    decimal? BalanceSheetSurplusQuotient);

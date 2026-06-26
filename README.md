@@ -36,8 +36,23 @@ an outage logs an error and the app still starts) and on demand via:
 > environment. Authorization is tracked as follow-up work.
 
 The import is an idempotent upsert keyed on `(BfsNumber, Year)`, so it is safe to
-re-run. Only two KPI ratios are modelled today (self-financing ratio, net debt per
-capita); the remaining ratios are a planned follow-up.
+re-run.
+
+### API
+
+- `GET /api/finance` — paged list. Query params: `municipality` (case-insensitive
+  substring), `year` (exact), `sortBy` (one of `municipalityName`, `year`, or any of the
+  nine ratio names e.g. `selfFinancingRatio`), `sortDir` (`asc`/`desc`), `page`, `pageSize`
+  (1–100). Ratio sorts place missing values last. Envelope: `{ ok, data:{ items, page, pageSize, total } }`.
+- `GET /api/finance/{bfs}/{year}` — a single municipality-year record, or `404` with
+  `{ ok:false, error:{ code, message } }`.
+- `POST /api/import` — re-run the importer (idempotent). Unauthenticated, dev-only (see caveat above).
+
+Errors use the envelope `{ ok:false, error:{ code, message } }`: `400` for invalid
+query input, `404` for an unknown record, `500` (generic, details logged server-side) otherwise.
+
+The nine indicators are the HRM2 key figures from dataset `sk-stat-4`; each maps to a
+documented source field on `FinanceIndicators`.
 
 ## Architecture
 

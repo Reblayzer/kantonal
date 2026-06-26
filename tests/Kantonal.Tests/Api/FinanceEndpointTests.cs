@@ -15,6 +15,9 @@ public class FinanceEndpointTests : IClassFixture<FinanceEndpointTests.TestApi>
     private readonly TestApi _api;
     public FinanceEndpointTests(TestApi api) => _api = api;
 
+    private static FinanceIndicators Ind(decimal? selfFinancing, decimal? netDebt) =>
+        new(selfFinancing, null, null, null, null, null, netDebt, null, null);
+
     [Fact]
     public async Task GetFinance_ReturnsOkEnvelopeWithItems()
     {
@@ -50,9 +53,78 @@ public class FinanceEndpointTests : IClassFixture<FinanceEndpointTests.TestApi>
 
     public record Envelope(bool Ok, Data? Data);
     public record Data(List<Item> Items, int Page, int PageSize, int Total);
-    public record Item(int BfsNumber, string MunicipalityName, int Year, decimal? SelfFinancingRatio, decimal? NetDebtPerCapitaChf);
+    public record Item(
+        int BfsNumber,
+        string MunicipalityName,
+        int Year,
+        decimal? SelfFinancingRatio,
+        decimal? SelfFinancingShare,
+        decimal? InterestBurdenShare,
+        decimal? CapitalServiceShare,
+        decimal? InvestmentShare,
+        decimal? GrossDebtShare,
+        decimal? NetDebtPerCapitaChf,
+        decimal? NetDebtQuotient,
+        decimal? BalanceSheetSurplusQuotient);
     public record ImportEnvelope(bool Ok, ImportData? Data);
     public record ImportData(int Imported);
+
+    [Fact]
+    public async Task GetFinance_FiltersByMunicipality()
+    {
+        var client = _api.CreateClient();
+        var response = await client.GetAsync("/api/finance?municipality=aadorf");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<Envelope>();
+        Assert.NotNull(body);
+        Assert.Equal(1, body!.Data!.Total);
+        Assert.Equal("Aadorf", Assert.Single(body.Data.Items).MunicipalityName);
+    }
+
+    [Fact]
+    public async Task GetFinanceByKey_ReturnsRecord()
+    {
+        var client = _api.CreateClient();
+        var response = await client.GetAsync("/api/finance/4551/2024");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<SingleEnvelope>();
+        Assert.NotNull(body);
+        Assert.True(body!.Ok);
+        Assert.Equal("Aadorf", body.Data!.MunicipalityName);
+    }
+
+    [Fact]
+    public async Task GetFinanceByKey_Returns404Envelope_WhenAbsent()
+    {
+        var client = _api.CreateClient();
+        var response = await client.GetAsync("/api/finance/9999/2024");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<ErrorEnvelope>();
+        Assert.NotNull(body);
+        Assert.False(body!.Ok);
+        Assert.Equal("finance_record_not_found", body.Error!.Code);
+    }
+
+    [Fact]
+    public async Task GetFinance_Returns400Envelope_OnBadSortField()
+    {
+        var client = _api.CreateClient();
+        var response = await client.GetAsync("/api/finance?sortBy=bogus");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<ErrorEnvelope>();
+        Assert.NotNull(body);
+        Assert.False(body!.Ok);
+        Assert.Equal("invalid_sort_field", body.Error!.Code);
+    }
+
+    // Response shapes for the new endpoints/errors:
+    public record SingleEnvelope(bool Ok, Item? Data);
+    public record ErrorEnvelope(bool Ok, ApiError? Error);
+    public record ApiError(string Code, string Message);
 
     public class TestApi : WebApplicationFactory<Program>
     {
@@ -83,9 +155,9 @@ public class FinanceEndpointTests : IClassFixture<FinanceEndpointTests.TestApi>
         public Task<IReadOnlyList<MunicipalFinanceRecord>> FetchAllAsync(CancellationToken ct)
             => Task.FromResult<IReadOnlyList<MunicipalFinanceRecord>>(new[]
             {
-                new MunicipalFinanceRecord(BfsNumber.Create(4551), "Aadorf", 2024, 163.81m, 1415.95m),
-                new MunicipalFinanceRecord(BfsNumber.Create(4711), "Affeltrangen", 2024, 80.36m, -683.62m),
-                new MunicipalFinanceRecord(BfsNumber.Create(4486), "Amlikon-Bissegg", 2024, 95.10m, 210.40m),
+                new MunicipalFinanceRecord(BfsNumber.Create(4551), "Aadorf", 2024, Ind(163.81m, 1415.95m)),
+                new MunicipalFinanceRecord(BfsNumber.Create(4711), "Affeltrangen", 2024, Ind(80.36m, -683.62m)),
+                new MunicipalFinanceRecord(BfsNumber.Create(4486), "Amlikon-Bissegg", 2024, Ind(95.10m, 210.40m)),
             });
     }
 }

@@ -114,6 +114,46 @@ public class ThurgauFinanceImporterTests
         Assert.Equal(1, calls);
     }
 
+    [Fact]
+    public async Task FetchAllAsync_MapsAllNineRatios()
+    {
+        const string payload = """
+        {
+          "total_count": 1,
+          "records": [
+            { "record": { "fields": {
+              "bfs_nr_gemeinde": "4551",
+              "gemeinde_name": "Aadorf",
+              "jahr": "2024",
+              "selbstfinanzierungsgrad_in": 163.81,
+              "selbstfinanzierungsanteil_in": 20.20,
+              "zinsbelastungsanteil_in": 0.63,
+              "kapitaldienstanteil_in": 6.81,
+              "investitionsanteil_in": 14.01,
+              "bruttoverschuldungsanteil_in": 141.04,
+              "nettoschuld_nettovermogen_pro_einwohner_in_chf": 1415.95,
+              "nettoverschuldungsquotient_in": 105.81,
+              "bilanzuberschussquotient_in": 128.37
+            }}}
+          ]
+        }
+        """;
+        var importer = ImporterReturning(_ => payload, pageSize: 100);
+
+        var records = await importer.FetchAllAsync(CancellationToken.None);
+
+        var r = Assert.Single(records);
+        Assert.Equal(163.81m, Math.Round(r.SelfFinancingRatio!.Value, 2));
+        Assert.Equal(20.20m, Math.Round(r.SelfFinancingShare!.Value, 2));
+        Assert.Equal(0.63m, Math.Round(r.InterestBurdenShare!.Value, 2));
+        Assert.Equal(6.81m, Math.Round(r.CapitalServiceShare!.Value, 2));
+        Assert.Equal(14.01m, Math.Round(r.InvestmentShare!.Value, 2));
+        Assert.Equal(141.04m, Math.Round(r.GrossDebtShare!.Value, 2));
+        Assert.Equal(1415.95m, Math.Round(r.NetDebtPerCapitaChf!.Value, 2));
+        Assert.Equal(105.81m, Math.Round(r.NetDebtQuotient!.Value, 2));
+        Assert.Equal(128.37m, Math.Round(r.BalanceSheetSurplusQuotient!.Value, 2));
+    }
+
     private static ThurgauFinanceImporter ImporterReturning(
         Func<HttpRequestMessage, string> responder, int pageSize)
     {
