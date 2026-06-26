@@ -1,0 +1,38 @@
+@using Kantonal.Web.Models
+
+<table class="table finance-table">
+    <thead>
+        <tr>
+            <th>BFS</th>
+            <th role="button" @onclick='() => OnSort.InvokeAsync("MunicipalityName")'>Municipality @Indicator("MunicipalityName")</th>
+            <th role="button" @onclick='() => OnSort.InvokeAsync("Year")'>Year @Indicator("Year")</th>
+            @foreach (var ratio in RatioCatalog.Ratios)
+            {
+                <th role="button" @onclick="() => OnSort.InvokeAsync(ratio.Key)">@ratio.Label @Indicator(ratio.Key)</th>
+            }
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var row in Items)
+        {
+            <tr>
+                <td>@row.BfsNumber</td>
+                <td>@row.MunicipalityName</td>
+                <td>@row.Year</td>
+                @foreach (var ratio in RatioCatalog.Ratios)
+                {
+                    <td class="num">@ratio.Format(row)</td>
+                }
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<FinanceRow> Items { get; set; } = Array.Empty<FinanceRow>();
+    [Parameter, EditorRequired] public SortState Sort { get; set; } = SortState.Default;
+    [Parameter] public EventCallback<string> OnSort { get; set; }
+
+    private string Indicator(string field)
+        => Sort.Field == field ? (Sort.Direction == SortState.Asc ? "▲" : "▼") : "";
+}
