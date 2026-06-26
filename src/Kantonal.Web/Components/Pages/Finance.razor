@@ -1,4 +1,5 @@
 @page "/finance"
+@using Kantonal.Web.Components.Finance
 @using Kantonal.Web.Models
 @using Kantonal.Web.Services
 @inject FinanceApiClient Api
@@ -8,47 +9,150 @@
 
 <h1>Cantonal/Municipal Finances (Thurgau)</h1>
 
-@if (_page is null)
+@if (_options is null)
 {
     <p><em>Loading…</em></p>
 }
 else
 {
-    <p>@_page.Total record(s).</p>
-    <table class="table">
-        <thead>
-            <tr>
-                <th>BFS</th><th>Municipality</th><th>Year</th>
-                <th>Self-financing ratio</th><th>Self-financing share</th><th>Interest burden share</th>
-                <th>Capital service share</th><th>Investment share</th><th>Gross debt share</th>
-                <th>Net debt/capita CHF</th><th>Net debt quotient</th><th>Balance-sheet surplus quotient</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var row in _page.Items)
-            {
-                <tr>
-                    <td>@row.BfsNumber</td>
-                    <td>@row.MunicipalityName</td>
-                    <td>@row.Year</td>
-                    <td>@row.SelfFinancingRatio</td>
-                    <td>@row.SelfFinancingShare</td>
-                    <td>@row.InterestBurdenShare</td>
-                    <td>@row.CapitalServiceShare</td>
-                    <td>@row.InvestmentShare</td>
-                    <td>@row.GrossDebtShare</td>
-                    <td>@row.NetDebtPerCapitaChf</td>
-                    <td>@row.NetDebtQuotient</td>
-                    <td>@row.BalanceSheetSurplusQuotient</td>
-                </tr>
-            }
-        </tbody>
-    </table>
+    <section class="controls">
+        <label>Municipality:
+            <select @bind="_municipality" @bind:after="ApplyFilterAsync">
+                <option value="">(all)</option>
+                @foreach (var m in _options.Municipalities)
+                {
+                    <option value="@m">@m</option>
+                }
+            </select>
+        </label>
+        <label>Year:
+            <select @bind="_year" @bind:after="ApplyFilterAsync">
+                <option value="">(all)</option>
+                @foreach (var y in _options.Years)
+                {
+                    <option value="@y">@y</option>
+                }
+            </select>
+        </label>
+    </section>
+
+    <section class="controls">
+        <label>Chart ratio:
+            <select @bind="_chartRatioKey" @bind:after="ReloadChartAsync">
+                @foreach (var r in RatioCatalog.Ratios)
+                {
+                    <option value="@r.Key">@r.Label</option>
+                }
+            </select>
+        </label>
+        <label>Chart year:
+            <select @bind="_chartYear" @bind:after="ReloadChartAsync">
+                @foreach (var y in _options.Years)
+                {
+                    <option value="@y">@y</option>
+                }
+            </select>
+        </label>
+    </section>
+
+    <RatioBarChart Data="_chartData" Title="@ChartTitle" />
+
+    @if (_page is null)
+    {
+        <p><em>Loading…</em></p>
+    }
+    else if (_page.Total == 0)
+    {
+        <p>No records.</p>
+    }
+    else
+    {
+        <p>@_page.Total record(s).</p>
+        <FinanceTable Items="_page.Items" Sort="_sort" OnSort="OnSortAsync" />
+        <div class="paging">
+            <button disabled="@(_pageNumber <= 1)" @onclick="PrevPageAsync">Prev</button>
+            <span>Page @_page.Page</span>
+            <button disabled="@(_pageNumber * PageSize >= _page.Total)" @onclick="NextPageAsync">Next</button>
+        </div>
+    }
 }
 
 @code {
+    private const int PageSize = 20;
+    private const int ChartTopN = 15;
+
+    private FilterOptions? _options;
     private FinancePage? _page;
 
+    private string _municipality = "";
+    private string _year = "";
+    private SortState _sort = SortState.Default;
+    private int _pageNumber = 1;
+
+    private string _chartRatioKey = "SelfFinancingRatio";
+    private int _chartYear;
+    private IReadOnlyList<RatioBarChart.Datum> _chartData = Array.Empty<RatioBarChart.Datum>();
+
+    private string ChartTitle =>
+        $"Top {ChartTopN} — {RatioCatalog.Ratios.First(r => r.Key == _chartRatioKey).Label} ({_chartYear})";
+
     protected override async Task OnInitializedAsync()
-        => _page = await Api.GetAsync(new FinanceQuery(Page: 1, PageSize: 20), CancellationToken.None);
+    {
+        _options = await Api.GetOptionsAsync(CancellationToken.None);
+        _chartYear = _options.Years.FirstOrDefault();
+        await ReloadTableAsync();
+        await ReloadChartAsync();
+    }
+
+    private async Task ApplyFilterAsync()
+    {
+        _pageNumber = 1;
+        await ReloadTableAsync();
+    }
+
+    private async Task ReloadTableAsync()
+    {
+        var query = new FinanceQuery(
+            Municipality: string.IsNullOrEmpty(_municipality) ? null : _municipality,
+            Year: string.IsNullOrEmpty(_year) ? null : int.Parse(_year),
+            SortBy: _sort.Field,
+            SortDir: _sort.Direction,
+            Page: _pageNumber,
+            PageSize: PageSize);
+        _page = await Api.GetAsync(query, CancellationToken.None);
+    }
+
+    private async Task ReloadChartAsync()
+    {
+        var ratio = RatioCatalog.Ratios.First(r => r.Key == _chartRatioKey);
+        var query = new FinanceQuery(
+            Year: _chartYear, SortBy: _chartRatioKey, SortDir: SortState.Desc,
+            Page: 1, PageSize: ChartTopN);
+        var page = await Api.GetAsync(query, CancellationToken.None);
+
+        _chartData = page.Items
+            .Where(row => ratio.Selector(row) is not null)
+            .Select(row => new RatioBarChart.Datum(row.MunicipalityName, ratio.Selector(row)!.Value))
+            .ToList();
+    }
+
+    private async Task OnSortAsync(string field)
+    {
+        _sort = _sort.Toggle(field);
+        _pageNumber = 1;
+        await ReloadTableAsync();
+    }
+
+    private async Task PrevPageAsync()
+    {
+        if (_pageNumber <= 1) return;
+        _pageNumber--;
+        await ReloadTableAsync();
+    }
+
+    private async Task NextPageAsync()
+    {
+        _pageNumber++;
+        await ReloadTableAsync();
+    }
 }
