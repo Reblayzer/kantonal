@@ -29,6 +29,27 @@ identity), and the entity becomes:
 MunicipalFinanceRecord(BfsNumber bfsNumber, string municipalityName, int year, FinanceIndicators indicators)
 ```
 
+**Persistence-mechanism note (verified by spike, 2026-06-26):** EF Core 8.0.8 cannot
+bind a value object (neither a `ComplexProperty` nor an `OwnsOne` reference) to a
+**constructor parameter** — it only binds scalar properties (`"references to owned
+types cannot be bound"`; complex types fail identically under the InMemory provider).
+So the entity does **not** map `FinanceIndicators` as a nested EF type. Instead:
+
+- The 9 ratios are stored as **flat scalar get-only properties** on the entity
+  (explicitly mapped, snake_case columns), exactly like the 2 existing ratios today.
+- The entity keeps a **private scalar constructor** `(BfsNumber, name, year, decimal? …×9)`
+  that **EF binds** for materialization (EF can use a private ctor), and the **public
+  domain constructor** `(BfsNumber, name, year, FinanceIndicators indicators)` delegates
+  to it. Domain/importer/test code only ever uses the public ≤4-param ctor.
+- The entity exposes `public FinanceIndicators Indicators => new(SelfFinancingRatio, …)`
+  as a **computed grouping**, configured `Ignore`d so EF does not try to map it.
+
+This keeps the entity immutable, keeps the public API at ≤4 ctor params via the value
+object, and keeps every ratio a real column the upsert's `CurrentValues.SetValues`
+already updates. `FinanceIndicators` remains the grouping used by the domain ctor, the
+DTO-building, and the importer. (Spike: a dual-ctor `Thing` with a private scalar ctor +
+public value-object ctor + ignored computed grouping round-trips correctly on InMemory.)
+
 `FinanceIndicators` holds 9 `decimal?` properties. Translation rule: *grad* → `Ratio`,
 *anteil* → `Share`, *quotient* → `Quotient`. Each property carries an XML doc comment
 citing its German source field.
@@ -51,10 +72,12 @@ meaning is invented.
 
 ## 2. Persistence + importer
 
-- **EF mapping:** `FinanceIndicators` is mapped as an EF Core 8 **complex type**
-  (`ComplexProperty`) so all 9 columns live on the existing `finance_records` table —
-  no join, no separate identity. Column names: snake_case of each property
+- **EF mapping:** the 9 ratios are mapped as **flat scalar properties** on
+  `MunicipalFinanceRecord` (see the persistence-mechanism note in §1 — complex/owned
+  ctor binding is not viable on EF 8.0.8). All 9 columns live on the existing
+  `finance_records` table. Column names: snake_case of each property
   (`self_financing_ratio`, `self_financing_share`, …), `numeric` type, all nullable.
+  EF materializes via the entity's private scalar constructor; `Indicators` is `Ignore`d.
 - **Migration:** a new EF migration adds the 7 new columns to `finance_records`. The
   2 existing columns (`self_financing_ratio`, `net_debt_per_capita_chf`) keep their
   current names so existing rows are preserved.
@@ -157,11 +180,12 @@ All tests deterministic and offline (no live network), consistent with follow-up
 
 ## 8. Risks / assumptions
 
-- **EF complex types + Npgsql + InMemory:** `ComplexProperty` must work under both
-  the Npgsql provider (real columns) and the InMemory provider (tests). If a provider
-  mismatch surfaces, the fallback is mapping the 9 ratios as flat owned/plain
-  properties on the entity — same columns, slightly more ceremony. The plan's first
-  domain/persistence task verifies this against InMemory before building on it.
+- **EF value-object ctor binding (RESOLVED by spike):** EF 8.0.8 cannot bind a
+  `ComplexProperty`/`OwnsOne` value object to a constructor parameter under the
+  InMemory provider (verified). Resolution adopted: flat scalar columns + a private
+  scalar EF constructor + a public `FinanceIndicators` ctor + an `Ignore`d computed
+  `Indicators` grouping (§1). No remaining risk on this axis; the InMemory round-trip
+  is proven. The plan's first task re-asserts it with a real entity test.
 - **Nulls-last ordering in EF→SQL:** expressed via a `.OrderBy(r => r.X == null)` key
   before the real sort key, which EF translates to SQL; verified by a repository test.
 - Translation names are conservative and sourced; if a reviewer prefers a different
