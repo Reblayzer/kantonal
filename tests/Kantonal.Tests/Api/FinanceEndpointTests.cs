@@ -37,8 +37,11 @@ public class FinanceEndpointTests : IClassFixture<FinanceEndpointTests.TestApi>
         {
             builder.ConfigureServices(services =>
             {
-                var descriptor = services.Single(d => d.ServiceType == typeof(DbContextOptions<KantonalDbContext>));
-                services.Remove(descriptor);
+                var descriptors = services
+                    .Where(d => d.ServiceType == typeof(DbContextOptions<KantonalDbContext>))
+                    .ToList();
+                foreach (var descriptor in descriptors)
+                    services.Remove(descriptor);
                 services.AddDbContext<KantonalDbContext>(o => o.UseInMemoryDatabase("api-tests"));
             });
         }
