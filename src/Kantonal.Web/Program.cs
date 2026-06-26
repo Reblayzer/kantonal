@@ -6,6 +6,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+var apiBaseUrl = builder.Configuration["ApiBaseUrl"] ?? "http://localhost:8080";
+builder.Services.AddHttpClient<Kantonal.Web.Services.FinanceApiClient>(c => c.BaseAddress = new Uri(apiBaseUrl));
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

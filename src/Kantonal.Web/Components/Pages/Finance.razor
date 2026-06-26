@@ -1,0 +1,42 @@
+@page "/finance"
+@using Kantonal.Web.Models
+@using Kantonal.Web.Services
+@inject FinanceApiClient Api
+@rendermode InteractiveServer
+
+<PageTitle>Kantonal — Municipal Finances</PageTitle>
+
+<h1>Cantonal/Municipal Finances (Thurgau)</h1>
+
+@if (_page is null)
+{
+    <p><em>Loading…</em></p>
+}
+else
+{
+    <p>@_page.Total record(s).</p>
+    <table class="table">
+        <thead>
+            <tr><th>BFS</th><th>Municipality</th><th>Year</th><th>Self-financing %</th><th>Net debt/capita CHF</th></tr>
+        </thead>
+        <tbody>
+            @foreach (var row in _page.Items)
+            {
+                <tr>
+                    <td>@row.BfsNumber</td>
+                    <td>@row.MunicipalityName</td>
+                    <td>@row.Year</td>
+                    <td>@row.SelfFinancingRatio</td>
+                    <td>@row.NetDebtPerCapitaChf</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private FinancePage? _page;
+
+    protected override async Task OnInitializedAsync()
+        => _page = await Api.GetAsync(1, 20, CancellationToken.None);
+}
