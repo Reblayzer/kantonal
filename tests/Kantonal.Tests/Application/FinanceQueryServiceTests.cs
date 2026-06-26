@@ -12,6 +12,8 @@ public class FinanceQueryServiceTests
         public Task<IReadOnlyList<MunicipalFinanceRecord>> GetAsync(int skip, int take, CancellationToken ct)
             => Task.FromResult<IReadOnlyList<MunicipalFinanceRecord>>(_all.Skip(skip).Take(take).ToList());
         public Task<int> CountAsync(CancellationToken ct) => Task.FromResult(_all.Count);
+        public Task<int> UpsertManyAsync(IReadOnlyList<MunicipalFinanceRecord> records, CancellationToken ct)
+            => Task.FromResult(0);
     }
 
     private static MunicipalFinanceRecord Row(int bfs, string name)
