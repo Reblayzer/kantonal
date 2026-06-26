@@ -54,8 +54,15 @@ public sealed class ThurgauFinanceImporter : IFinanceImportSource
         if (string.IsNullOrWhiteSpace(fields.MunicipalityName)) return null;
 
         var indicators = new FinanceIndicators(
-            ToDecimal(fields.SelfFinancingRatio), null, null, null, null, null,
-            ToDecimal(fields.NetDebtPerCapitaChf), null, null);
+            ToDecimal(fields.SelfFinancingRatio),
+            ToDecimal(fields.SelfFinancingShare),
+            ToDecimal(fields.InterestBurdenShare),
+            ToDecimal(fields.CapitalServiceShare),
+            ToDecimal(fields.InvestmentShare),
+            ToDecimal(fields.GrossDebtShare),
+            ToDecimal(fields.NetDebtPerCapitaChf),
+            ToDecimal(fields.NetDebtQuotient),
+            ToDecimal(fields.BalanceSheetSurplusQuotient));
 
         return new MunicipalFinanceRecord(BfsNumber.Create(bfs), fields.MunicipalityName, year, indicators);
     }
@@ -77,5 +84,12 @@ public sealed class ThurgauFinanceImporter : IFinanceImportSource
         [property: JsonPropertyName("gemeinde_name")] string? MunicipalityName,
         [property: JsonPropertyName("jahr")] string? Year,
         [property: JsonPropertyName("selbstfinanzierungsgrad_in")] double? SelfFinancingRatio,
-        [property: JsonPropertyName("nettoschuld_nettovermogen_pro_einwohner_in_chf")] double? NetDebtPerCapitaChf);
+        [property: JsonPropertyName("selbstfinanzierungsanteil_in")] double? SelfFinancingShare,
+        [property: JsonPropertyName("zinsbelastungsanteil_in")] double? InterestBurdenShare,
+        [property: JsonPropertyName("kapitaldienstanteil_in")] double? CapitalServiceShare,
+        [property: JsonPropertyName("investitionsanteil_in")] double? InvestmentShare,
+        [property: JsonPropertyName("bruttoverschuldungsanteil_in")] double? GrossDebtShare,
+        [property: JsonPropertyName("nettoschuld_nettovermogen_pro_einwohner_in_chf")] double? NetDebtPerCapitaChf,
+        [property: JsonPropertyName("nettoverschuldungsquotient_in")] double? NetDebtQuotient,
+        [property: JsonPropertyName("bilanzuberschussquotient_in")] double? BalanceSheetSurplusQuotient);
 }
