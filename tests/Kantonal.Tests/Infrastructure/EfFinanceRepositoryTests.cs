@@ -37,6 +37,29 @@ public class EfFinanceRepositoryTests
     }
 
     [Fact]
+    public async Task Upsert_PersistsAllNineRatios()
+    {
+        var opts = new DbContextOptionsBuilder<KantonalDbContext>()
+            .UseInMemoryDatabase("nine-ratios").Options;
+        var indicators = new FinanceIndicators(1m, 2m, 3m, 4m, 5m, 6m, 7m, 8m, 9m);
+
+        await using (var ctx = new KantonalDbContext(opts))
+        {
+            var repo = new EfFinanceRepository(ctx);
+            await repo.UpsertManyAsync(new[]
+            {
+                new MunicipalFinanceRecord(BfsNumber.Create(4551), "Aadorf", 2024, indicators)
+            }, CancellationToken.None);
+        }
+
+        await using (var verify = new KantonalDbContext(opts))
+        {
+            var loaded = await verify.FinanceRecords.SingleAsync();
+            Assert.Equal(indicators, loaded.Indicators);
+        }
+    }
+
+    [Fact]
     public async Task UpsertManyAsync_InsertsNewAndUpdatesExisting()
     {
         await using var ctx = NewContext();
