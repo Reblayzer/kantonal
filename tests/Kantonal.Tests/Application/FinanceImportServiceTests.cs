@@ -43,9 +43,13 @@ public class FinanceImportServiceTests
             return Task.FromResult(records.Count);
         }
 
-        public Task<IReadOnlyList<MunicipalFinanceRecord>> GetAsync(int skip, int take, CancellationToken ct)
+        public Task<IReadOnlyList<MunicipalFinanceRecord>> QueryAsync(FinanceQuery query, CancellationToken ct)
             => Task.FromResult<IReadOnlyList<MunicipalFinanceRecord>>(Array.Empty<MunicipalFinanceRecord>());
 
-        public Task<int> CountAsync(CancellationToken ct) => Task.FromResult(0);
+        public Task<int> CountAsync(string? municipality, int? year, CancellationToken ct)
+            => Task.FromResult(0);
+
+        public Task<MunicipalFinanceRecord?> GetByKeyAsync(BfsNumber bfsNumber, int year, CancellationToken ct)
+            => Task.FromResult<MunicipalFinanceRecord?>(null);
     }
 }

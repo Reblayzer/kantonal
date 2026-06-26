@@ -14,11 +14,13 @@ public class FinanceQueryService
         page = page < 1 ? 1 : page;
         pageSize = Math.Clamp(pageSize, 1, MaxPageSize);
 
-        var total = await _repo.CountAsync(ct);
-        var records = await _repo.GetAsync((page - 1) * pageSize, pageSize, ct);
-        var items = records.Select(ToDto).ToList();
+        var query = new FinanceQuery(null, null, FinanceSortField.MunicipalityName, SortDirection.Asc,
+            (page - 1) * pageSize, pageSize);
 
-        return new PagedResult<FinanceRecordDto>(items, page, pageSize, total);
+        var total = await _repo.CountAsync(null, null, ct);
+        var records = await _repo.QueryAsync(query, ct);
+
+        return new PagedResult<FinanceRecordDto>(records.Select(ToDto).ToList(), page, pageSize, total);
     }
 
     private static FinanceRecordDto ToDto(MunicipalFinanceRecord r) => new(

@@ -1,3 +1,4 @@
+using Kantonal.Application;
 using Kantonal.Domain;
 using Kantonal.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -17,8 +18,87 @@ public class EfFinanceRepositoryTests
     private static FinanceIndicators Ind(decimal? selfFinancing, decimal? netDebt) =>
         new(selfFinancing, null, null, null, null, null, netDebt, null, null);
 
+    private static MunicipalFinanceRecord Rec(int bfs, string name, int year, decimal? selfFinancing)
+        => new(BfsNumber.Create(bfs), name, year,
+            new FinanceIndicators(selfFinancing, null, null, null, null, null, null, null, null));
+
     [Fact]
-    public async Task GetAsync_OrdersByNameAndPaginates()
+    public async Task QueryAsync_FiltersByMunicipalitySubstring_CaseInsensitive()
+    {
+        await using var ctx = NewContext();
+        ctx.FinanceRecords.AddRange(
+            Rec(1, "Aadorf", 2024, 1m), Rec(2, "Affeltrangen", 2024, 2m), Rec(3, "Bürglen", 2024, 3m));
+        await ctx.SaveChangesAsync();
+        var repo = new EfFinanceRepository(ctx);
+
+        var q = new FinanceQuery("aff", null, FinanceSortField.MunicipalityName, SortDirection.Asc, 0, 50);
+        var result = await repo.QueryAsync(q, CancellationToken.None);
+        var count = await repo.CountAsync("aff", null, CancellationToken.None);
+
+        Assert.Equal(1, count);
+        Assert.Equal("Affeltrangen", Assert.Single(result).MunicipalityName);
+    }
+
+    [Fact]
+    public async Task QueryAsync_FiltersByYear()
+    {
+        await using var ctx = NewContext();
+        ctx.FinanceRecords.AddRange(Rec(1, "Aadorf", 2023, 1m), Rec(1, "Aadorf", 2024, 2m));
+        await ctx.SaveChangesAsync();
+        var repo = new EfFinanceRepository(ctx);
+
+        var result = await repo.QueryAsync(
+            new FinanceQuery(null, 2023, FinanceSortField.Year, SortDirection.Asc, 0, 50), CancellationToken.None);
+
+        Assert.Equal(2023, Assert.Single(result).Year);
+    }
+
+    [Fact]
+    public async Task QueryAsync_SortsByRatioDescending_NullsLast()
+    {
+        await using var ctx = NewContext();
+        ctx.FinanceRecords.AddRange(
+            Rec(1, "Low", 2024, 10m), Rec(2, "High", 2024, 99m), Rec(3, "Null", 2024, null));
+        await ctx.SaveChangesAsync();
+        var repo = new EfFinanceRepository(ctx);
+
+        var result = await repo.QueryAsync(
+            new FinanceQuery(null, null, FinanceSortField.SelfFinancingRatio, SortDirection.Desc, 0, 50),
+            CancellationToken.None);
+
+        Assert.Equal(new[] { "High", "Low", "Null" }, result.Select(r => r.MunicipalityName).ToArray());
+    }
+
+    [Fact]
+    public async Task QueryAsync_SortsByRatioAscending_NullsLast()
+    {
+        await using var ctx = NewContext();
+        ctx.FinanceRecords.AddRange(
+            Rec(1, "Low", 2024, 10m), Rec(2, "High", 2024, 99m), Rec(3, "Null", 2024, null));
+        await ctx.SaveChangesAsync();
+        var repo = new EfFinanceRepository(ctx);
+
+        var result = await repo.QueryAsync(
+            new FinanceQuery(null, null, FinanceSortField.SelfFinancingRatio, SortDirection.Asc, 0, 50),
+            CancellationToken.None);
+
+        Assert.Equal(new[] { "Low", "High", "Null" }, result.Select(r => r.MunicipalityName).ToArray());
+    }
+
+    [Fact]
+    public async Task GetByKeyAsync_ReturnsRecordOrNull()
+    {
+        await using var ctx = NewContext();
+        ctx.FinanceRecords.Add(Rec(4551, "Aadorf", 2024, 1m));
+        await ctx.SaveChangesAsync();
+        var repo = new EfFinanceRepository(ctx);
+
+        Assert.NotNull(await repo.GetByKeyAsync(BfsNumber.Create(4551), 2024, CancellationToken.None));
+        Assert.Null(await repo.GetByKeyAsync(BfsNumber.Create(9999), 2024, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task QueryAsync_OrdersByNameAndPaginates()
     {
         await using var ctx = NewContext();
         ctx.FinanceRecords.AddRange(
@@ -28,8 +108,10 @@ public class EfFinanceRepositoryTests
         await ctx.SaveChangesAsync();
 
         var repo = new EfFinanceRepository(ctx);
-        var page = await repo.GetAsync(skip: 1, take: 1, CancellationToken.None);
-        var total = await repo.CountAsync(CancellationToken.None);
+        var page = await repo.QueryAsync(
+            new FinanceQuery(null, null, FinanceSortField.MunicipalityName, SortDirection.Asc, Skip: 1, Take: 1),
+            CancellationToken.None);
+        var total = await repo.CountAsync(null, null, CancellationToken.None);
 
         Assert.Equal(3, total);
         Assert.Single(page);

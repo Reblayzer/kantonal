@@ -7,13 +7,21 @@ public class FinanceQueryServiceTests
 {
     private sealed class FakeRepo : IFinanceRepository
     {
-        private readonly List<MunicipalFinanceRecord> _all;
-        public FakeRepo(IEnumerable<MunicipalFinanceRecord> all) => _all = all.ToList();
-        public Task<IReadOnlyList<MunicipalFinanceRecord>> GetAsync(int skip, int take, CancellationToken ct)
-            => Task.FromResult<IReadOnlyList<MunicipalFinanceRecord>>(_all.Skip(skip).Take(take).ToList());
-        public Task<int> CountAsync(CancellationToken ct) => Task.FromResult(_all.Count);
+        private readonly List<MunicipalFinanceRecord> _records;
+        public FakeRepo(params MunicipalFinanceRecord[] records) => _records = records.ToList();
+
+        public Task<IReadOnlyList<MunicipalFinanceRecord>> QueryAsync(FinanceQuery query, CancellationToken ct)
+            => Task.FromResult<IReadOnlyList<MunicipalFinanceRecord>>(
+                _records.Skip(query.Skip).Take(query.Take).ToList());
+
+        public Task<int> CountAsync(string? municipality, int? year, CancellationToken ct)
+            => Task.FromResult(_records.Count);
+
+        public Task<MunicipalFinanceRecord?> GetByKeyAsync(BfsNumber bfsNumber, int year, CancellationToken ct)
+            => Task.FromResult(_records.FirstOrDefault(r => r.BfsNumber == bfsNumber && r.Year == year));
+
         public Task<int> UpsertManyAsync(IReadOnlyList<MunicipalFinanceRecord> records, CancellationToken ct)
-            => Task.FromResult(0);
+            => Task.FromResult(records.Count);
     }
 
     private static FinanceIndicators Ind(decimal? selfFinancing, decimal? netDebt) =>
