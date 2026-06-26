@@ -18,17 +18,29 @@ builder.Services.AddHttpClient<IFinanceImportSource, ThurgauFinanceImporter>(cli
 builder.Services.AddScoped<FinanceImportService>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
 
 var app = builder.Build();
+
+app.UseExceptionHandler();
 
 app.UseSwagger();
 app.UseSwaggerUI();
 
-app.MapGet("/api/finance", async (FinanceQueryService service, int? page, int? pageSize, CancellationToken ct) =>
+app.MapGet("/api/finance", async (FinanceQueryService service,
+    string? municipality, int? year, string? sortBy, string? sortDir, int? page, int? pageSize,
+    CancellationToken ct) =>
 {
-    var request = new FinanceListRequest(null, null, null, null, page ?? 1, pageSize ?? 20);
+    var request = new FinanceListRequest(municipality, year, sortBy, sortDir, page ?? 1, pageSize ?? 20);
     var result = await service.GetPageAsync(request, ct);
     return Results.Ok(ApiEnvelope.Success(result));
+});
+
+app.MapGet("/api/finance/{bfs:int}/{year:int}", async (FinanceQueryService service, int bfs, int year, CancellationToken ct) =>
+{
+    var dto = await service.GetByKeyAsync(bfs, year, ct);
+    return Results.Ok(ApiEnvelope.Success(dto));
 });
 
 app.MapGet("/health", () => Results.Ok(ApiEnvelope.Success(new { status = "ok" })));

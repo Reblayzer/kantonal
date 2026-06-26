@@ -69,6 +69,63 @@ public class FinanceEndpointTests : IClassFixture<FinanceEndpointTests.TestApi>
     public record ImportEnvelope(bool Ok, ImportData? Data);
     public record ImportData(int Imported);
 
+    [Fact]
+    public async Task GetFinance_FiltersByMunicipality()
+    {
+        var client = _api.CreateClient();
+        var response = await client.GetAsync("/api/finance?municipality=aadorf");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<Envelope>();
+        Assert.NotNull(body);
+        Assert.Equal(1, body!.Data!.Total);
+        Assert.Equal("Aadorf", Assert.Single(body.Data.Items).MunicipalityName);
+    }
+
+    [Fact]
+    public async Task GetFinanceByKey_ReturnsRecord()
+    {
+        var client = _api.CreateClient();
+        var response = await client.GetAsync("/api/finance/4551/2024");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<SingleEnvelope>();
+        Assert.NotNull(body);
+        Assert.True(body!.Ok);
+        Assert.Equal("Aadorf", body.Data!.MunicipalityName);
+    }
+
+    [Fact]
+    public async Task GetFinanceByKey_Returns404Envelope_WhenAbsent()
+    {
+        var client = _api.CreateClient();
+        var response = await client.GetAsync("/api/finance/9999/2024");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<ErrorEnvelope>();
+        Assert.NotNull(body);
+        Assert.False(body!.Ok);
+        Assert.Equal("finance_record_not_found", body.Error!.Code);
+    }
+
+    [Fact]
+    public async Task GetFinance_Returns400Envelope_OnBadSortField()
+    {
+        var client = _api.CreateClient();
+        var response = await client.GetAsync("/api/finance?sortBy=bogus");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<ErrorEnvelope>();
+        Assert.NotNull(body);
+        Assert.False(body!.Ok);
+        Assert.Equal("invalid_sort_field", body.Error!.Code);
+    }
+
+    // Response shapes for the new endpoints/errors:
+    public record SingleEnvelope(bool Ok, Item? Data);
+    public record ErrorEnvelope(bool Ok, ApiError? Error);
+    public record ApiError(string Code, string Message);
+
     public class TestApi : WebApplicationFactory<Program>
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)
