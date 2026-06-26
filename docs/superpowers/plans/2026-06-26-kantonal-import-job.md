@@ -131,12 +131,11 @@ git commit -m "feat(infrastructure): idempotent UpsertManyAsync on finance repos
 
 ### Task 2: Import source port and orchestration service
 
-Add the `IFinanceImportSource` port (fetch all domain records) and a `FinanceImportService` that fetches then upserts. Register the service in `AddApplication`.
+Add the `IFinanceImportSource` port (fetch all domain records) and a `FinanceImportService` that fetches then upserts. **DI registration is deferred to Task 4**: registering `FinanceImportService` here would leave the DI graph with an unresolvable `IFinanceImportSource` (no implementation until Task 4), and `WebApplicationFactory` validates the service graph on build — breaking the existing `FinanceEndpointTests`. So Task 2 ships the classes + unit test only; Task 4 registers `FinanceImportService` and the import source together.
 
 **Files:**
 - Create: `src/Kantonal.Application/IFinanceImportSource.cs`
 - Create: `src/Kantonal.Application/FinanceImportService.cs`
-- Modify: `src/Kantonal.Application/DependencyInjection.cs`
 - Test: `tests/Kantonal.Tests/Application/FinanceImportServiceTests.cs`
 
 **Interfaces:**
@@ -248,23 +247,22 @@ public sealed class FinanceImportService
 }
 ```
 
-- [ ] **Step 5: Register the service**
-
-In `src/Kantonal.Application/DependencyInjection.cs`, add after the existing `FinanceQueryService` registration:
-
-```csharp
-        services.AddScoped<FinanceImportService>();
-```
-
-- [ ] **Step 6: Run the test to verify it passes**
+- [ ] **Step 5: Run the test to verify it passes**
 
 Run: `dotnet test tests/Kantonal.Tests --filter ImportAsync_UpsertsAllFetchedRecords`
 Expected: PASS.
 
+Do NOT register `FinanceImportService` in DI here — that is Task 4's job (see the task description above for why). Do not create any stub/placeholder implementation of `IFinanceImportSource`; the real one arrives in Task 3 and is wired in Task 4.
+
+- [ ] **Step 6: Run the full suite (no regressions)**
+
+Run: `dotnet test`
+Expected: PASS (14/14 — the 13 so far plus this one; `FinanceEndpointTests` stays green because nothing resolves `FinanceImportService` yet).
+
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/Kantonal.Application/IFinanceImportSource.cs src/Kantonal.Application/FinanceImportService.cs src/Kantonal.Application/DependencyInjection.cs tests/Kantonal.Tests/Application/FinanceImportServiceTests.cs
+git add src/Kantonal.Application/IFinanceImportSource.cs src/Kantonal.Application/FinanceImportService.cs tests/Kantonal.Tests/Application/FinanceImportServiceTests.cs
 git commit -m "feat(application): finance import source port and orchestration service"
 ```
 
@@ -599,7 +597,7 @@ using Kantonal.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 ```
 
-2. After `builder.Services.AddInfrastructure(connectionString);`, register the typed client:
+2. After `builder.Services.AddInfrastructure(connectionString);`, register the typed client **and the import service** (its DI registration was deferred from Task 2 to here, so its `IFinanceImportSource` dependency resolves):
 
 ```csharp
 builder.Services.AddHttpClient<IFinanceImportSource, ThurgauFinanceImporter>(client =>
@@ -607,6 +605,7 @@ builder.Services.AddHttpClient<IFinanceImportSource, ThurgauFinanceImporter>(cli
     client.BaseAddress = new Uri("https://data.tg.ch/");
     client.Timeout = TimeSpan.FromSeconds(30);
 });
+builder.Services.AddScoped<FinanceImportService>();
 ```
 
 3. Add the manual trigger endpoint next to the other `Map*` calls (after the `/health` mapping):
