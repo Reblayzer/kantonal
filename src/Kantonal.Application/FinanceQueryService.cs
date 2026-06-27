@@ -26,6 +26,9 @@ public sealed class FinanceQueryService
         return new PagedResult<FinanceRecordDto>(records.Select(ToDto).ToList(), page, pageSize, total);
     }
 
+    public Task<FinanceFilterOptions> GetFilterOptionsAsync(CancellationToken ct)
+        => _repo.GetFilterOptionsAsync(ct);
+
     public async Task<FinanceRecordDto> GetByKeyAsync(int bfsNumber, int year, CancellationToken ct)
     {
         if (bfsNumber <= 0)

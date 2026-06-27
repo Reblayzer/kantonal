@@ -51,5 +51,8 @@ public class FinanceImportServiceTests
 
         public Task<MunicipalFinanceRecord?> GetByKeyAsync(BfsNumber bfsNumber, int year, CancellationToken ct)
             => Task.FromResult<MunicipalFinanceRecord?>(null);
+
+        public Task<FinanceFilterOptions> GetFilterOptionsAsync(CancellationToken ct)
+            => Task.FromResult(new FinanceFilterOptions(Array.Empty<string>(), Array.Empty<int>()));
     }
 }

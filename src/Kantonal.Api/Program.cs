@@ -43,6 +43,12 @@ app.MapGet("/api/finance/{bfs:int}/{year:int}", async (FinanceQueryService servi
     return Results.Ok(ApiEnvelope.Success(dto));
 });
 
+app.MapGet("/api/finance/options", async (FinanceQueryService service, CancellationToken ct) =>
+{
+    var options = await service.GetFilterOptionsAsync(ct);
+    return Results.Ok(ApiEnvelope.Success(options));
+});
+
 app.MapGet("/health", () => Results.Ok(ApiEnvelope.Success(new { status = "ok" })));
 
 // Dev-only manual import trigger. No auth yet — authorization is a follow-up (see PROJECT_BRAINSTORM.md).

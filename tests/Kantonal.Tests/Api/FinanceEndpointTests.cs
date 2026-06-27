@@ -121,6 +121,23 @@ public class FinanceEndpointTests : IClassFixture<FinanceEndpointTests.TestApi>
         Assert.Equal("invalid_sort_field", body.Error!.Code);
     }
 
+    [Fact]
+    public async Task GetFinanceOptions_ReturnsDistinctMunicipalitiesAndYears()
+    {
+        var client = _api.CreateClient();
+        var response = await client.GetAsync("/api/finance/options");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<OptionsEnvelope>();
+        Assert.NotNull(body);
+        Assert.True(body!.Ok);
+        Assert.Equal(new[] { "Aadorf", "Affeltrangen", "Amlikon-Bissegg" }, body.Data!.Municipalities.ToArray());
+        Assert.Equal(new[] { 2024 }, body.Data.Years.ToArray());
+    }
+
+    public record OptionsEnvelope(bool Ok, OptionsData? Data);
+    public record OptionsData(List<string> Municipalities, List<int> Years);
+
     // Response shapes for the new endpoints/errors:
     public record SingleEnvelope(bool Ok, Item? Data);
     public record ErrorEnvelope(bool Ok, ApiError? Error);
