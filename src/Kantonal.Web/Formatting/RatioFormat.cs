@@ -11,12 +11,13 @@ public static class RatioFormat
 {
     public const string Empty = "—";
 
-    private static readonly NumberFormatInfo Swiss = new()
+    // Read-only so the shared instance can't be mutated. NumberGroupSizes
+    // already defaults to { 3 }, so only the separators need overriding.
+    private static readonly NumberFormatInfo Swiss = NumberFormatInfo.ReadOnly(new()
     {
         NumberGroupSeparator = "'",
         NumberDecimalSeparator = ".",
-        NumberGroupSizes = new[] { 3 },
-    };
+    });
 
     public static string Percent(decimal? value)
         => value is null ? Empty : value.Value.ToString("N1", Swiss) + " %";
