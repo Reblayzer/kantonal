@@ -61,5 +61,33 @@ documented source field on `FinanceIndicators`.
 `Domain` ← `Application` ← `Infrastructure` (EF Core/Postgres) + `Api` (composition
 root). `Web` (Blazor) is a separate client calling the API over HTTP.
 
-Built with AI-assisted development (Claude Code) and reviewed before merging.
-Azure deployment notes are tracked in follow-up work.
+## AI-assisted development
+
+This project was built with Claude Code using a spec-driven workflow: each feature
+started as a brainstormed design spec, was expanded into a task-by-task implementation
+plan, then built test-first (TDD) — usually via subagent-driven development, one
+reviewed task per commit. Every change went through a code-review pass over the diff
+and was merged via pull request, with CI gating build, tests, and formatting. The
+design specs and implementation plans are kept under `docs/superpowers/`.
+
+## Azure deployment notes
+
+> **Not currently deployed.** These notes describe how the project is structured to run
+> on Azure — they are a deployment recipe, not a description of live infrastructure.
+
+The two container images (`Kantonal.Api`, `Kantonal.Web`) plus a managed PostgreSQL map
+onto Azure as:
+
+- **Azure Database for PostgreSQL Flexible Server** — replaces the `db` Compose service;
+  use its connection string.
+- **Azure App Service for Containers** (or Container Apps) — one app for the API image
+  and one for the Web image, built from the existing Dockerfiles. Both containers listen
+  on port `8080`, so set `WEBSITES_PORT=8080` on each App Service.
+- **Configuration** via app settings / environment variables — never commit secrets:
+  - API: `ConnectionStrings__Kantonal` = the Flexible Server connection string.
+  - Web: `ApiBaseUrl` = the API app's public URL.
+
+On first boot the API applies its EF schema and runs the failure-tolerant import, so a
+fresh database is populated automatically; gate `POST /api/import` behind auth before any
+shared deployment (see the import caveat above). Intended to fit free/low-cost tiers —
+deploy only if it stays cheap.
