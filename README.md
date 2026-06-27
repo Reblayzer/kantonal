@@ -1,5 +1,7 @@
 # Kantonal
 
+[![CI](https://github.com/Reblayzer/kantonal/actions/workflows/ci.yml/badge.svg)](https://github.com/Reblayzer/kantonal/actions/workflows/ci.yml)
+
 ASP.NET Core (clean architecture) service exposing Swiss cantonal/municipal
 finance data (opendata.swiss, Canton Thurgau dataset `sk-stat-4`) via a REST API
 and a Blazor dashboard.
