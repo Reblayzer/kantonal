@@ -25,10 +25,22 @@ public class RatioCatalogTests
     [Fact]
     public void Selectors_ReturnTheMatchingProperty()
     {
+        // FullRow assigns each property a distinct value 1..9 in catalog order,
+        // so the i-th ratio's selector must return i+1.
         var row = FullRow();
-        Assert.Equal(1m, RatioCatalog.Ratios.Single(r => r.Key == "SelfFinancingRatio").Selector(row));
-        Assert.Equal(7m, RatioCatalog.Ratios.Single(r => r.Key == "NetDebtPerCapitaChf").Selector(row));
-        Assert.Equal(9m, RatioCatalog.Ratios.Single(r => r.Key == "BalanceSheetSurplusQuotient").Selector(row));
+        var expected = new[] { 1m, 2m, 3m, 4m, 5m, 6m, 7m, 8m, 9m };
+        for (var i = 0; i < RatioCatalog.Ratios.Count; i++)
+            Assert.Equal(expected[i], RatioCatalog.Ratios[i].Selector(row));
+    }
+
+    [Fact]
+    public void Units_ExactlyOneChfTheRestPercent()
+    {
+        var chf = RatioCatalog.Ratios.Where(r => r.Unit == RatioUnit.Chf).ToArray();
+        Assert.Equal("NetDebtPerCapitaChf", Assert.Single(chf).Key);
+        Assert.All(
+            RatioCatalog.Ratios.Where(r => r.Key != "NetDebtPerCapitaChf"),
+            r => Assert.Equal(RatioUnit.Percent, r.Unit));
     }
 
     [Fact]

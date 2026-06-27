@@ -40,6 +40,19 @@ public class BarChartGeometryTests
     }
 
     [Fact]
+    public void Compute_NonZeroGap_SpacesBarsAndShrinksWidth()
+    {
+        // width 100, 3 bars, gap 5 → total gap 10, bar width (100-10)/3 = 30.
+        var layout = BarChartGeometry.Compute(new[] { 10m, 20m, 30m }, 100, 200, gap: 5);
+
+        Assert.Equal(3, layout.Bars.Count);
+        Assert.All(layout.Bars, b => Assert.Equal(30d, b.Width, 3));
+        Assert.Equal(0d, layout.Bars[0].X, 3);
+        Assert.Equal(35d, layout.Bars[1].X, 3);  // 30 + 5
+        Assert.Equal(70d, layout.Bars[2].X, 3);  // 2*(30 + 5)
+    }
+
+    [Fact]
     public void Compute_NegativeValues_ClampToZeroHeight()
     {
         var layout = BarChartGeometry.Compute(new[] { -10m, 100m }, 100, 200, gap: 0);
