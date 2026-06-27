@@ -135,10 +135,9 @@ public class FinanceEndpointTests : IClassFixture<FinanceEndpointTests.TestApi>
         Assert.Equal(new[] { 2024 }, body.Data.Years.ToArray());
     }
 
+    // Response shapes for the new endpoints/errors:
     public record OptionsEnvelope(bool Ok, OptionsData? Data);
     public record OptionsData(List<string> Municipalities, List<int> Years);
-
-    // Response shapes for the new endpoints/errors:
     public record SingleEnvelope(bool Ok, Item? Data);
     public record ErrorEnvelope(bool Ok, ApiError? Error);
     public record ApiError(string Code, string Message);
